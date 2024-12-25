@@ -1,39 +1,26 @@
 package main
 
 import (
-	"io"
+	"BuildingMicroservicesWithGo/handlers"
 	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
 
-	log.Println("The server is running!")
+	log.Println("\033[34;2mThe server is running!\033[0m")
 
-	// Хэндлеры (регистрируют функции в DefaultServeMux)
-	http.HandleFunc("/h", helloHandler)
-	http.HandleFunc("/g", goodbyeHandler)
+	l := log.New(os.Stdout, "product-api: ", log.LstdFlags) // 1-куда выводим, 2-префикс, 3-настройки флагов
 
-	http.ListenAndServe(":9090", nil) // Используем DefaultServeMux
-}
+	helloHandler := handlers.NewHello(l)
+	goodbyeHandler := handlers.NewGoodbye(l)
 
-// Приветственный хендлер
-func helloHandler(rw http.ResponseWriter, req *http.Request) {
-	log.SetOutput(rw) // Переустанавливаю базовый вывод инфы
-	log.Println("Hello from client!")
+	sm := http.NewServeMux() // Новый роутер
+	sm.Handle("/h", helloHandler)
+	sm.Handle("/g", goodbyeHandler)
 
-	// Считывам данные из запроса (req.Body - интерфейс io.ReadCloser => нужно что-то, умеющее читать из него)
-	data, err := io.ReadAll(req.Body)
-	if err != nil {
-		http.Error(rw, "Error while reading the body: %e\n", http.StatusBadRequest)
-		return // http.Error не прерывает сервачок
-	}
-	log.Printf("Data: %s\n", string(data)) // Можно было бы через rw.Write, но там нельзя писать в кавычках
-
-}
-
-// Прощальный хендлер
-func goodbyeHandler(rw http.ResponseWriter, req *http.Request) {
-	log.SetOutput(rw)
-	log.Println("Goodbye from client!")
+	if err := http.ListenAndServe(":9090", sm); err != nil {
+		l.Fatalf("Error with server running: %#v\n", err)
+	} // Используем наш ServeMux
 }
