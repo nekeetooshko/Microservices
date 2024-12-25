@@ -7,36 +7,42 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
 
+/*
+Пришлось вынести, т.к. передать его функции goodbyeHandler (а она в последующем)
+
+передаст его на closeServer не получится, иначе пропадет имплементация интерфейса handler -
+ServeHTTP. Пиздец жопа съела трусы
+*/
+var server http.Server = http.Server{Addr: ":9090"}
+
 func main() {
 
-	// Играюсь с цветами вывода (escape-команды). Чо кринж то сразу?
 	log.Println("\033[34mThe server is running!\033[0m")
 
-	// Хэндлеры (регистрируют функции в DefaultServeMux)
-	http.HandleFunc("/h", helloHandler)
-	http.HandleFunc("/g", goodbyeHandler)
+	var wg sync.WaitGroup
 
-	server := http.Server{Addr: ":9090"}
-
-	/* Здесь выбрана такая реализция: сервак на горутине, GS на main'e, ведь если бы мы выбрали обратку
-	(сервак на main, GS на горутине), то мы бы просто застопали main функцией ListenAndServe.
-	Таким образом, он не сможет обрабатывать сигналы, пока сервер не завершит работу, что делает невозможным
-	точное реагирование на Ctrl + C до тех пор, пока сервер не завершит свои операции.
-	*/
-
+	wg.Add(1)
 	go func() {
 
-		err := http.ListenAndServe(server.Addr, nil)
-		if err != nil {
+		defer wg.Done()
+
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Error with server running: %#v\n", err)
 		}
 	}()
 
+	http.HandleFunc("/h", helloHandler)
+	http.HandleFunc("/g", goodbyeHandler)
+
 	gracefulShutdown(&server)
+
+	wg.Wait()
 }
 
 // Приветственный хендлер
@@ -58,6 +64,23 @@ func helloHandler(rw http.ResponseWriter, req *http.Request) {
 func goodbyeHandler(rw http.ResponseWriter, req *http.Request) {
 	log.SetOutput(rw)
 	log.Println("Goodbye from client!")
+
+	closeServer(&server)
+
+}
+
+func closeServer(server *http.Server) {
+	go func() { // Без горутины последний log.Printf не успеет отработать
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			log.Fatalf("Error while server is shutting down by handler: %#v\n", err)
+		}
+	}()
+
+	log.Printf("The server id down by the client request")
 }
 
 // Graceful shutdown
