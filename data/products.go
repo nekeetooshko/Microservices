@@ -48,6 +48,13 @@ func AddProduct(prod *Product) {
 	productList = append(productList, prod)
 }
 
+// Обновляет товар по переданному id-шнику
+func UpdateProduct(id int, prod *Product) {
+
+	prod.ID = id // Передаем корректный ID
+	productList[id-1] = prod
+}
+
 // Получает id-шник ласт элемента
 func getNextId() int {
 	// Нужна она для корректного добавления данных в БД. Ведь в запросе можно указать любой id-шник, а
