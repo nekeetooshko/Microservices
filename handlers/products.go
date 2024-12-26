@@ -5,6 +5,8 @@ import (
 	"BuildingMicroservicesWithGo/data"
 	"log"
 	"net/http"
+	"regexp"
+	"strconv"
 )
 
 type Products struct {
@@ -27,6 +29,26 @@ func (p *Products) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	case http.MethodPost:
 		p.addProduct(rw, req)
 		return
+
+	case http.MethodPut:
+		// p.updateProduct(rw, req)
+
+		// Дабы обновить что-то по id-шнику, его нужно достать. Регулярки. Дада, блять. Регулярки
+		reg := regexp.MustCompile(`/([0-9]+)`)
+		group := reg.FindAllStringSubmatch(req.URL.Path, -1) // Будет хранить наш id-шник
+
+		if len(group) != 0 && len(group[0]) != 2 {
+			http.Error(rw, "Error with regExp", http.StatusBadRequest)
+		}
+
+		// Отынтуем id
+		idInInt, err := strconv.Atoi(group[0][1])
+		if err != nil {
+			http.Error(rw, "Error with converting string data into int", http.StatusBadRequest)
+			return
+		}
+		p.l.SetOutput(rw)
+		p.l.Println(idInInt)
 
 	default:
 
@@ -53,6 +75,25 @@ func (p *Products) addProduct(rw http.ResponseWriter, req *http.Request) {
 
 	p.l.SetOutput(rw)
 	p.l.Println("POST - handler")
+
+	product := &data.Product{} // Сюда положим десериализованные данные
+	err := product.FromJSON(req.Body)
+
+	if err != nil {
+		http.Error(rw, "Error while deserialization json", http.StatusBadRequest)
+	}
+
+	p.l.Printf("Our new product: %#v\n", product)
+
+	data.AddProduct(product)
+
+}
+
+// Обработчик PUT - запроса
+func (p *Products) updateProduct(rw http.ResponseWriter, req *http.Request) {
+
+	p.l.SetOutput(rw)
+	p.l.Println("PUT - handler")
 
 	product := &data.Product{} // Сюда положим десериализованные данные
 	err := product.FromJSON(req.Body)
