@@ -62,4 +62,7 @@ func (p *Products) addProduct(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	p.l.Printf("Our new product: %#v\n", product)
+
+	data.AddProduct(product)
+
 }

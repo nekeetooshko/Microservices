@@ -19,6 +19,8 @@ type Product struct {
 
 type Products []*Product
 
+// ----------------------------------------------------------------------------------------------------
+
 // задает дефолтный энкодер через writer, которому будет передан http.ResponseWriter
 func (p *Products) ToJSON(writer io.Writer) error {
 
@@ -33,8 +35,24 @@ func (p *Product) FromJSON(r io.Reader) error {
 	return newDecoder.Decode(p)      // Читает данные и десериализует их в p
 }
 
+// ----------------------------------------------------------------------------------------------------
+
 func GetProduts() Products {
 	return productList
+}
+
+// Добавляет товар к уже готовому списку товаров
+func AddProduct(prod *Product) {
+
+	prod.ID = getNextId()
+	productList = append(productList, prod)
+}
+
+// Получает id-шник ласт элемента
+func getNextId() int {
+	// Нужна она для корректного добавления данных в БД. Ведь в запросе можно указать любой id-шник, а
+	// добавлять стоит по конкретному
+	return productList[len(productList)-1].ID + 1
 }
 
 var productList = []*Product{
