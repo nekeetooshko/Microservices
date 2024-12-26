@@ -27,6 +27,12 @@ func (p *Products) ToJSON(writer io.Writer) error {
 	return encoder.Encode(p)
 }
 
+// Создаем декодер и читаем все данные из io.Reader
+func (p *Product) FromJSON(r io.Reader) error {
+	newDecoder := json.NewDecoder(r) // Читает из r
+	return newDecoder.Decode(p)      // Читает данные и десериализует их в p
+}
+
 func GetProduts() Products {
 	return productList
 }

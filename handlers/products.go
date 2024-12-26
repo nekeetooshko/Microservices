@@ -18,24 +18,27 @@ func NewProduct(l *log.Logger) *Products {
 // Роутер
 func (p *Products) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
-	// Роутинг запросов
 	switch req.Method {
-	// Если это метод GET
+
 	case http.MethodGet:
 		p.GetProducts(rw, req)
 		return
 
-	default: // Если метод не определен
-		// rw.Write([]byte("Method not specified"))
+	case http.MethodPost:
+		p.addProduct(rw, req)
+		return
+
+	default:
+
 		rw.WriteHeader(http.StatusMethodNotAllowed)
 	}
 
 }
 
-// Метод GET
 func (p *Products) GetProducts(rw http.ResponseWriter, req *http.Request) {
 
 	p.l.SetOutput(rw)
+	p.l.Println("GET - handler")
 
 	productsList := data.GetProduts()
 
@@ -43,4 +46,20 @@ func (p *Products) GetProducts(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(rw, "Serialization error", http.StatusInternalServerError) // 500 ошибка
 	}
+}
+
+// Обработчик POST - запроса
+func (p *Products) addProduct(rw http.ResponseWriter, req *http.Request) {
+
+	p.l.SetOutput(rw)
+	p.l.Println("POST - handler")
+
+	product := &data.Product{} // Сюда положим десериализованные данные
+	err := product.FromJSON(req.Body)
+
+	if err != nil {
+		http.Error(rw, "Error while deserialization json", http.StatusBadRequest)
+	}
+
+	p.l.Printf("Our new product: %#v\n", product)
 }
