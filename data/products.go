@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 )
@@ -46,6 +47,34 @@ func AddProduct(prod *Product) {
 
 	prod.ID = getNextId()
 	productList = append(productList, prod)
+}
+
+// Какой-то буллщит, буллщит, ультраМяу
+func UpdateProduct(id int, prod *Product) error {
+
+	_, pos, err := findProduct(id)
+	if err != nil {
+		return err
+	}
+
+	prod.ID = id
+	productList[pos] = prod
+
+	return nil
+
+}
+
+var ErrProductNotFound = fmt.Errorf("Product not found")
+
+// Ищет товар по указанному id-шнику
+func findProduct(id int) (*Product, int, error) {
+	for i, v := range productList {
+		if v.ID == id {
+			return v, i, nil
+		}
+	}
+
+	return nil, -1, ErrProductNotFound
 }
 
 // Получает id-шник ласт элемента
