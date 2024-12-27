@@ -19,12 +19,19 @@ func main() {
 	l := log.New(os.Stdout, "product-api: ", log.LstdFlags)
 	productHandler := handlers.NewProduct(l)
 
-	sm := mux.NewRouter() // Создаем роутер от гориллы (основной/корневой)
+	sm := mux.NewRouter()
 
-	// Создаем отдельный саброутер для обработки GET - запросов. Methods вернет rout, созданный специально для
-	// GET - запросов. В конце, через .SubRouter - конвертим это в роутер
-	getRouter := sm.Methods("GET").Subrouter()
+	getRouter := sm.Methods(http.MethodGet).Subrouter() // Можно и просто ручками указать "GET"
 	getRouter.HandleFunc("/", productHandler.GetProducts)
+
+	postRouter := sm.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/", productHandler.AddProduct)
+
+	putRouter := sm.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/{id:[0-9]+}", productHandler.UpdateProducts)
+	/* Возьмет id-шник, значения которого - цифры от 0 до 9 + значит, что их может быть много.
+	А вообще, под капотом мы создаем переменную - id и далее этот id-шник пойдет в mux.Vars, и на UpdateProduct'e мы его извлечем
+	*/
 
 	server := &http.Server{
 		Addr:         ":9090",

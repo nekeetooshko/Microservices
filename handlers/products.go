@@ -5,6 +5,9 @@ import (
 	"BuildingMicroservicesWithGo/data"
 	"log"
 	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 type Products struct {
@@ -29,7 +32,7 @@ func (p *Products) GetProducts(rw http.ResponseWriter, req *http.Request) {
 }
 
 // Обработчик POST - запроса
-func (p *Products) addProduct(rw http.ResponseWriter, req *http.Request) {
+func (p *Products) AddProduct(rw http.ResponseWriter, req *http.Request) {
 
 	p.l.SetOutput(rw)
 	p.l.Println("POST - handler")
@@ -48,13 +51,21 @@ func (p *Products) addProduct(rw http.ResponseWriter, req *http.Request) {
 }
 
 // Обработчик PUT - запроса
-func (p *Products) updateProducts(id int, rw http.ResponseWriter, req *http.Request) {
+func (p *Products) UpdateProducts(rw http.ResponseWriter, req *http.Request) {
+
+	vars := mux.Vars(req)
+	// Отдает переменные, обнаруженные в URI, в виде map[string]string
+
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(rw, "Unable to convert id from string to int", http.StatusBadRequest)
+	}
 
 	p.l.SetOutput(rw)
-	p.l.Println("PUT - handler")
+	p.l.Println("PUT - handler", id)
 
 	product := &data.Product{}
-	err := product.FromJSON(req.Body)
+	err = product.FromJSON(req.Body)
 
 	if err != nil {
 		http.Error(rw, "Error while deserialization json", http.StatusBadRequest)
