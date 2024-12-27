@@ -8,17 +8,23 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
 
-	log.Println("\033[34;2mThe server is running!\033[0m")
+	log.Println("\033[34;3mThe server is running!\033[0m")
 
 	l := log.New(os.Stdout, "product-api: ", log.LstdFlags)
 	productHandler := handlers.NewProduct(l)
 
-	sm := http.NewServeMux()
-	sm.Handle("/", productHandler)
+	sm := mux.NewRouter() // Создаем роутер от гориллы (основной/корневой)
+
+	// Создаем отдельный саброутер для обработки GET - запросов. Methods вернет rout, созданный специально для
+	// GET - запросов. В конце, через .SubRouter - конвертим это в роутер
+	getRouter := sm.Methods("GET").Subrouter()
+	getRouter.HandleFunc("/", productHandler.GetProducts)
 
 	server := &http.Server{
 		Addr:         ":9090",
@@ -40,7 +46,7 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, os.Kill)
 
 	sig := <-sigChan
-	l.Printf("\033[31mThe interrupt command received: %v\033[0m\n", sig)
+	l.Printf("\033[31;3mThe interrupt command received: %v\033[0m\n", sig)
 
 	// Добавим закрытие сервака (аналог GS)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
