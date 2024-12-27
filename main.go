@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -49,15 +50,27 @@ func main() {
 		}
 	}()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, os.Kill)
+	gracefulShutdown(server)
+}
 
-	sig := <-sigChan
-	l.Printf("\033[31;3mThe interrupt command received: %v\033[0m\n", sig)
+// Graceful shutdown
+func gracefulShutdown(server *http.Server) {
 
-	// Добавим закрытие сервака (аналог GS)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	signalChan := make(chan os.Signal, 2)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
-	server.Shutdown(ctx)
+	select { // Он тут по факту нахуй не нужен, но меня научили писать GS на нем
+
+	case sig := <-signalChan: // Можно было бы без присваивания, но я вывожу сигнал, так что
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			log.Fatalf("Error while server is shutting down: %#v\n", err)
+		}
+
+		// Здесь стоит escape-команда. Это моя шиза. Все хорошо.
+		log.Printf("\033[31mConnection stop by signal: %v, %#v\n\033[0m", sig, sig)
+	}
 }

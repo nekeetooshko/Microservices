@@ -72,5 +72,4 @@ func (p *Products) UpdateProducts(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	data.UpdateProduct(id, product)
-
 }
