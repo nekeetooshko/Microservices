@@ -27,12 +27,11 @@ func main() {
 
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/", productHandler.AddProduct)
+	postRouter.Use(productHandler.MiddleWareProductValidation)
 
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
 	putRouter.HandleFunc("/{id:[0-9]+}", productHandler.UpdateProducts)
-	/* Возьмет id-шник, значения которого - цифры от 0 до 9 + значит, что их может быть много.
-	А вообще, под капотом мы создаем переменную - id и далее этот id-шник пойдет в mux.Vars, и на UpdateProduct'e мы его извлечем
-	*/
+	putRouter.Use(productHandler.MiddleWareProductValidation)
 
 	server := &http.Server{
 		Addr:         ":9090",

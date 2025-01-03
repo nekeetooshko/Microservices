@@ -1,8 +1,8 @@
-// Это goodbyeHandler
 package handlers
 
 import (
 	"BuildingMicroservicesWithGo/data"
+	"context"
 	"log"
 	"net/http"
 	"strconv"
@@ -37,12 +37,7 @@ func (p *Products) AddProduct(rw http.ResponseWriter, req *http.Request) {
 	p.l.SetOutput(rw)
 	p.l.Println("POST - handler")
 
-	product := &data.Product{} // Сюда положим десериализованные данные
-	err := product.FromJSON(req.Body)
-
-	if err != nil {
-		http.Error(rw, "Error while deserialization json", http.StatusBadRequest)
-	}
+	product := req.Context().Value(ProductKey{}).(*data.Product)
 
 	p.l.Printf("Our new product: %#v\n", product)
 
@@ -61,15 +56,31 @@ func (p *Products) UpdateProducts(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Unable to convert id from string to int", http.StatusBadRequest)
 	}
 
+	product := req.Context().Value(ProductKey{}).(*data.Product) // После точки - преобразование к ТД
+
 	p.l.SetOutput(rw)
 	p.l.Println("PUT - handler", id)
 
-	product := &data.Product{}
-	err = product.FromJSON(req.Body)
+	data.UpdateProduct(id, product) // Можно было бы привести к указателю тут, а не на Type assertion
+}
 
-	if err != nil {
-		http.Error(rw, "Error while deserialization json", http.StatusBadRequest)
-	}
+type ProductKey struct{}
 
-	data.UpdateProduct(id, product)
+// Middleware
+func (p Products) MiddleWareProductValidation(nextFunc http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+		product := &data.Product{}
+		err := product.FromJSON(req.Body)
+
+		if err != nil {
+			http.Error(rw, "Error while deserialization json", http.StatusBadRequest)
+			return
+		}
+		ctx := context.WithValue(req.Context(), ProductKey{}, product)
+		reqCopy := req.WithContext(ctx)
+
+		nextFunc.ServeHTTP(rw, reqCopy)
+	})
 }
